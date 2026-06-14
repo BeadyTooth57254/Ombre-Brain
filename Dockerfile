@@ -33,6 +33,7 @@ ENV OMBRE_TRANSPORT=streamable-http
 ENV OMBRE_BUCKETS_DIR=/app/buckets
 
 EXPOSE 8000
+EXPOSE 8010
 
 # 启动方式：由 Zeabur Service 的环境变量 SERVICE 决定
 # SERVICE=mcp   → python server.py
