@@ -19,7 +19,7 @@ log_level: "INFO"
 # 指向你的 Obsidian 仓库子目录，或任意本地文件夹
 # Leave as-is to use the built-in ./buckets/ directory
 # 保持默认则使用内置的 ./buckets/ 目录
-# buckets_dir: "/path/to/your/Obsidian Vault/Ombre Brain"
+buckets_dir: "/app/buckets"
 
 # --- Runtime state path / 运行状态路径 ---
 # Stores runtime SQLite state such as Persona State outside bucket sync.
