@@ -34,4 +34,7 @@ ENV OMBRE_BUCKETS_DIR=/app/buckets
 
 EXPOSE 8000
 
-CMD ["python", "server.py"]
+# 启动方式：由 Zeabur Service 的环境变量 SERVICE 决定
+# SERVICE=mcp   → python server.py
+# SERVICE=gateway → python gateway.py
+CMD if [ "$SERVICE" = "gateway" ]; then python gateway.py; else python server.py; fi
