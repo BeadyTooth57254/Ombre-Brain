@@ -246,11 +246,11 @@ gateway:
   host: "0.0.0.0"
   port: 8000
   default_session_id: "main"      # used only by compatible routes when the header is omitted
-  upstream_base_url: "https://api.openai.com/v1"
-  upstream_default_model: "gpt-4.1-mini"
+  upstream_base_url: "https://api.deepseek.com/v1"
+  upstream_default_model: "deepseek-v4-pro"
   upstream_models:
-    - "gpt-4.1-mini"
-    - "gpt-4.1"
+    - "deepseek-v4-pro"
+    - "deepseek-v4-flash"
   # Optional prompt cache hints / 可选提示缓存参数
   # openai: send prompt_cache_key using X-Ombre-Session-Id; leave empty for other providers.
   # openai: 使用 X-Ombre-Session-Id 发送 prompt_cache_key；其他供应商保持空值。
