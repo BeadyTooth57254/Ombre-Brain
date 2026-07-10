@@ -312,7 +312,7 @@ gateway:
   portrait_memory_budget: 360
   portrait_memory_max_sources: 8
   portrait_memory_include_anchors: false # true optionally adds ordinary anchors; never includes pinned/protected/self_anchor
-  query_planner_enabled: true  # extra LLM call: split long/low-confidence messages into short recall queries
+  query_planner_enabled: false  # extra LLM call: split long/low-confidence messages into short recall queries
   query_planner_model: ""      # empty = use dehydration.model via dehydration API
   query_planner_min_chars: 16  # also catches short emotional reason lookups like "今天为什么激动哭"
   query_planner_max_queries: 3
@@ -433,7 +433,7 @@ memory_relevance:
 # 追踪缓慢人格变化、关系状态，以及按会话保存的短期情绪。
 persona:
   enabled: true
-  profile_id: "haven_xiaoyu"
+  profile_id: "es_sentinel"
   mode: "llm"
   base_url: "https://api.deepseek.com/v1"
   model: "deepseek-chat"
