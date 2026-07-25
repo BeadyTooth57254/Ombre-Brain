@@ -106,9 +106,9 @@ Daily Reflection 可根据当天聊天、已有 auto-memory 产物和近期记�
 
 `reflection.daily_chat_memory_mode` 决定候选去向：
 
-- `review`：只生成待审候选，由人在 Dashboard 确认；默认推荐。
+- `review`：只生成待审候选，由人在 Dashboard 确认。
 - `auto`：达到较高置信度的候选自动进入正常写入链路。
-- `off`：关闭当天聊天的自动记忆整理。
+- `off`：关闭当天聊天的自动记忆整理；这是默认值。
 
 即使使用 `auto`，候选仍需经过记忆写入、去重和合并边界。原始聊天继续留在 raw events；自动记忆只保存脱水后仍值得长期带走的部分。
 

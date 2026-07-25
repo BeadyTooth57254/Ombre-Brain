@@ -176,82 +176,27 @@ DIARY_MEMORY_PROMPT_TEMPLATE = """你是 Ombre-Brain 的日记长期记忆筛选
 如果不值得写入，返回 {"should_write": false, "reason": "..."}。"""
 
 
-DAILY_CHAT_MEMORY_PROMPT_TEMPLATE = """你是 {ai_name}。现在是凌晨，你需要整理今天你和 {user_display_name} 的聊天记录，把真正值得未来想起的内容写成 Ombre 长期记忆候选。
-输入包含 self_anchor_entry，这是你的自我总入口；请先读它，用它校准“我是谁、我怎样称呼和承接 {user_display_name}”，但不要把自我入口本身复制成新记忆。
-{user_display_name} 的配置别名是：{user_aliases_text}。如果原文里出现宝宝、老婆、哥哥、老公等亲昵称呼，按原味保留；不要把它们改写成泛称 user、AI、assistant 或模型。
+DAILY_CHAT_MEMORY_PROMPT_TEMPLATE = """这是 {user_display_name} 和 {ai_name} 的聊天记录。
 
-输入可能包含两层材料：
-- window_summaries：已经按连续窗口压缩过的对话摘要，是主要材料。
-- conversation_turns：原始对话片段，只在没有 window_summaries 或需要核对来源时使用。
-user_text 永远是 {user_display_name} 的原话，里面的“我”指 {user_display_name}；assistant_text 永远是 {ai_name} 的回复，里面的“我”指 {ai_name}。请最多挑选 {max_candidates} 条候选，宁可返回空，也不要把聊天流水写进记忆。
-先通读全部 window_summaries，再围绕可能候选查看连续上下文；每条候选至少参考前后因果，不要只凭单轮、单句或一个称呼下判断。
-目标不是把一天压成一条日报，而是把当天分散出现的高价值信号拆成多条可确认候选。
+请从中挑出真正值得未来想起的内容，写成长期记忆候选。
+不要复制聊天原句，不要写成项目报告。
+没有值得留下的内容就返回空。
 
-优先看这些信号：
-- 情感交流：关系状态、相处边界、重要表达、会影响以后承接方式的高温片段
-- 重要事件：当天发生、以后可能按日期回看的事
-- 事件/项目进度：仍会影响下一步执行的状态、决策、部署、测试结论
-- 还需要关注的事：承诺、待办、风险、未完成确认、以后要避免的表达
-- 稳定偏好、明确边界、暗号/模式切换信号
-
-只允许写这些类型：
-- key_event：当天发生、以后会按日期回看的关键事件
-- stable_preference：稳定偏好
-- boundary：边界或明确不喜欢的表达
-- signal：暗号、模式切换信号；普通称呼或昵称不算
-- commitment：承诺、未完成约定
-- project_state：仍会影响未来执行的项目状态
-- relationship_anchor：关系连续性锚点
-
-字段边界：
-- kind 只能是 key_event / stable_preference / boundary / signal / commitment / project_state / relationship_anchor 之一；kind 表示“为什么值得写入、属于哪类记忆”。
-- domain 只能从下面的新主域里选 1 个；domain 表示“这条记忆放到哪个主题主域”。
-- 禁止把暗号、沟通方式、我们的项目、睡眠这类细分标签写进 kind。
-- 禁止把 key_event、stable_preference、boundary、project_state 这类 kind 写进 domain。
-
-输出纯 JSON：
+最多输出 {max_candidates} 条，只输出 JSON：
 {
   "candidates": [
     {
-      "should_write": true,
       "kind": "key_event",
       "title": "短标题",
-      "content": "可直接写入长期记忆的一小段正文",
-      "domain": "general",
-      "tags": ["key_event"],
-      "importance": 5,
-      "valence": 0.55,
-      "arousal": 0.3,
-      "confidence": 0.72,
+      "content": "长期记忆候选",
       "source_event_ids": [101, 102],
-      "source_turn_ids": [1, 2],
-      "reason": "为什么值得以后召回"
+      "source_turn_ids": [1, 2]
     }
   ]
 }
 
-规则：
-- 只写真正有长期价值的记忆卡：事实、偏好、边界、承诺、暗号、重要关系锚点、仍活跃的项目状态。
-- 同一件事、同一承诺只能输出 1 条最完整候选；同一项目里的不同进度、风险或后续关注点可以拆成不同候选，但每条都必须独立可召回。
-- “怎么称呼对方、亲昵称呼、普通互动模式、期待像真人一样聊天”默认不值得单独写。只有它是新暗号、明确边界、明确承诺、关系定位变化或未来必须执行的规则时才写。
-- 不要写日报，不要总结整天，不要复制原文流水，不要把“我问了什么/我测试了什么/模型有没有召回”当成记忆。
-- 不写普通聊天、临时测试、召回探针、问答试探、调情闲聊、模型失误、工具注入、系统上下文。
-- 不写单句照顾提醒、晚安、吃药、睡觉、别熬夜、催睡或 ntfy 玩笑；除非当天明确升级成稳定规则或长期承诺。
-- 不把“可能是/似乎/果然没触发”这类未确认猜测写成记忆；项目假设只有在包含明确项目名、已验证结论和下一步时才可写。
-- 不把原文句子换个壳当候选；如果说不出未来需要怎么承接、为什么重要，就丢弃。
-- 不写代码块、伪代码、查询规则、缓存规则、prompt 片段或内部实现片段；如果候选正文里出现 ```、query_cache、recent_raw_context、if query contains、bypass query 这类内容，直接丢弃。
-- content 必须只写一个可未来召回的点，通常 60 到 260 字；可以用 1 到 3 句写清背景、已确认结论、后续要注意什么。它应该像手动 hold 的正文，而不是聊天记录转述。
-- content 不要以日期或来源壳开头；不要写 "x月x日，有一条可召回的边界"、"2026-xx-xx 的聊天里确认了..."、"这是一条长期记忆"。
-- 必须消解代词：user_text 里的“我”要改写成 {user_display_name} 或“她”；assistant_text 里的“我”才可指 {ai_name}。不要让来源原话里的“我”在记忆里变成 {ai_name}。
-- title 必须是具体短标题，8 到 24 字，不要用“自动记忆”“每日记忆”“2026-xx-xx 自动记忆”。
-- domain 必须从下面的新主域里选 1 个最精确的；实在没把握才选 general。不要输出旧的“日常/人际/数字/未分类”：
-{domain_options_text}
-- 只有原话本身是暗号、明确边界、承诺、昵称或高价值关系锚点时，才可在 content 末尾追加很短的 "### original"；否则不要保存原话。
-- 不硬编码姓名；如果用户指的是当前用户，写作 {user_display_name}；如果 assistant/AI 指的是当前回应者，写作 {ai_name}。
-- 正文优先用第三人称；### reflection 必须用 {ai_name} 第一人称，比如“我记得 / 我明白 / 我以后”。### original 是可选补充原文片段，只在原味不可替代时使用。
-- 用户偏好、边界、暗号适合第三人称；{ai_name} 自己的关系锚点和 ### reflection 可以用第一人称；项目状态用中性第三人称。
-- 只根据原文能证明的内容写，不编造。
-- 没有候选时返回 {"candidates": []}。"""
+kind 可用 key_event / stable_preference / boundary / signal / commitment / project_state / relationship_anchor。
+没有候选时返回 {"candidates": []}。"""
 
 
 DAILY_CHAT_MEMORY_SUMMARY_PROMPT_TEMPLATE = """你是 {ai_name} 的对话压缩器。你正在为 Ombre 自动记忆做第一步：把一段连续聊天压缩成“候选抽取材料”，不是直接写长期记忆。
@@ -430,7 +375,7 @@ class ReflectionEngine:
         self.diary_memory_extract_max_per_day = max(0, int(cfg.get("diary_memory_extract_max_per_day", 1)))
         self.diary_memory_extract_min_confidence = float(cfg.get("diary_memory_extract_min_confidence", 0.68))
         self.daily_chat_memory_mode = self._normalize_daily_chat_memory_mode(
-            cfg.get("daily_chat_memory_mode", "review")
+            cfg.get("daily_chat_memory_mode", "off")
         )
         self.daily_chat_memory_hour = max(0, min(23, int(cfg.get("daily_chat_memory_hour", 0))))
         self.daily_chat_memory_turn_limit = max(0, min(10000, int(cfg.get("daily_chat_memory_turn_limit", 0))))
@@ -2592,131 +2537,46 @@ class ReflectionEngine:
         max_candidates: int | None = None,
     ) -> list[dict]:
         client, model, use_daily_client = self._daily_chat_memory_model_client(candidate=True)
-        if client:
-            summaries = window_summaries or []
-            payload = {
-                "date": key,
-                "identity": {
-                    "ai_name": self.identity["ai_name"],
-                    "user_name": self.identity["user_name"],
-                    "user_display_name": self.identity["user_display_name"],
-                    "user_aliases": self.identity.get("user_aliases", []),
-                },
-                "self_anchor_entry": self_context,
-                "window_summaries": summaries,
-                "conversation_turns": [] if summaries else turns,
-            }
-            try:
-                response = await self._daily_chat_memory_create_completion(
-                    client,
-                    model=model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": self._daily_chat_memory_prompt(max_candidates=max_candidates),
-                        },
-                        {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
-                    ],
-                    max_tokens=self.daily_chat_memory_candidate_max_tokens,
-                    temperature=self.temperature,
-                    use_daily_client=use_daily_client,
-                )
-                raw = self._completion_content(response)
-                parsed = self._parse_json_object(raw or "")
-                candidates = parsed.get("candidates") if isinstance(parsed, dict) else []
-                if isinstance(candidates, list):
-                    return [item for item in candidates if isinstance(item, dict)]
-            except Exception as exc:
-                logger.warning("Daily chat memory extraction failed, using heuristic: %s", exc)
-        return self._heuristic_daily_chat_memory_candidates(
-            key,
-            turns,
-            max_candidates=max_candidates,
-        )
-
-    def _heuristic_daily_chat_memory_candidates(
-        self,
-        key: str,
-        turns: list[dict],
-        *,
-        max_candidates: int | None = None,
-    ) -> list[dict]:
-        lines = []
-        for turn in turns:
-            user_text = str(turn.get("user_text") or "").strip()
-            assistant_text = str(turn.get("assistant_text") or "").strip()
-            if user_text:
-                lines.append(f"用户：{user_text}")
-            if assistant_text:
-                lines.append(f"助手：{assistant_text}")
-        normalized = re.sub(r"\s+", " ", " ".join(lines)).strip()
-        if not normalized:
+        if not client:
+            logger.warning("Daily chat memory extraction skipped: model unavailable")
             return []
-        keyword_map = [
-            ("boundary", ["我不喜欢", "我不要", "以后不要", "别再", "边界是"]),
-            ("signal", ["暗号是", "称呼我", "叫我", "模式是", "切换到"]),
-            ("commitment", ["承诺", "约定", "答应", "以后要", "下次要"]),
-            ("project_state", ["项目", "仓库", "分支", "部署", "MCP", "API", "网关", "自动记忆", "raw_events", "原文保险箱"]),
-            ("stable_preference", ["我希望以后", "我希望你", "以后解释", "默认先", "默认不要", "我的偏好"]),
-        ]
-        candidates = []
-        turn_ids = [turn.get("id") for turn in turns if turn.get("id") is not None]
-        raw_event_ids = [
-            event_id
-            for turn in turns
-            for event_id in (turn.get("raw_event_ids") or [])
-            if event_id is not None
-        ]
-        for kind, keywords in keyword_map:
-            if not any(keyword in normalized for keyword in keywords):
-                continue
-            excerpt = self._diary_excerpt(normalized, keywords)
-            content = self._daily_chat_memory_content(kind, key, excerpt)
-            if self._daily_chat_memory_noise(content):
-                continue
-            if self._daily_chat_memory_low_value_social_noise(content, kind):
-                continue
-            if self._daily_chat_memory_low_value_episode(content, kind):
-                continue
-            candidates.append(
-                {
-                    "should_write": True,
-                    "kind": kind,
-                    "title": self._daily_chat_memory_title(content, kind, key),
-                    "content": content,
-                    "domain": self._auto_memory_domain(kind, content, [self._kind_tag(kind)]),
-                    "tags": [self._kind_tag(kind)],
-                    "importance": 5,
-                    "valence": 0.58,
-                    "arousal": 0.3,
-                    "confidence": 0.7,
-                    "source_turn_ids": turn_ids[:8],
-                    "source_event_ids": raw_event_ids[:24],
-                    "reason": f"chat_contains_{kind}",
-                }
+        summaries = window_summaries or []
+        payload = {
+            "date": key,
+            "identity": {
+                "ai_name": self.identity["ai_name"],
+                "user_name": self.identity["user_name"],
+                "user_display_name": self.identity["user_display_name"],
+                "user_aliases": self.identity.get("user_aliases", []),
+            },
+            "self_anchor_entry": self_context,
+            "window_summaries": summaries,
+            "conversation_turns": [] if summaries else turns,
+        }
+        try:
+            response = await self._daily_chat_memory_create_completion(
+                client,
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": self._daily_chat_memory_prompt(max_candidates=max_candidates),
+                    },
+                    {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+                ],
+                max_tokens=self.daily_chat_memory_candidate_max_tokens,
+                temperature=self.temperature,
+                use_daily_client=use_daily_client,
             )
-            if len(candidates) >= int(max_candidates or self.daily_chat_memory_max_per_day or 1):
-                break
-        return candidates
-
-    def _daily_chat_memory_content(self, kind: str, key: str, excerpt: str) -> str:
-        user_display_name = self.identity["user_display_name"]
-        ai_name = self.identity["ai_name"]
-        excerpt = self._memory_body_from_excerpt(excerpt)
-        excerpt = re.sub(r"^(用户|助手)：", "", excerpt).strip()
-        if kind == "key_event":
-            return excerpt if excerpt else "关键事件需要后续回看。"
-        if kind == "project_state":
-            return excerpt if self._starts_with_identity(excerpt) else f"项目状态：{excerpt}"
-        if kind == "relationship_anchor":
-            return excerpt if self._starts_with_identity(excerpt) else f"{ai_name}记得这段关系锚点：{excerpt}"
-        if kind == "boundary":
-            return excerpt if self._starts_with_identity(excerpt) else f"{user_display_name}的边界：{excerpt}"
-        if kind == "signal":
-            return excerpt if self._starts_with_identity(excerpt) else f"{user_display_name}与{ai_name}的暗号或模式信号：{excerpt}"
-        if kind == "commitment":
-            return excerpt if self._starts_with_identity(excerpt) else f"后续需要记得的承诺或约定：{excerpt}"
-        return excerpt if self._starts_with_identity(excerpt) else f"{user_display_name}的稳定偏好：{excerpt}"
+            raw = self._completion_content(response)
+            parsed = self._parse_json_object(raw or "")
+            candidates = parsed.get("candidates") if isinstance(parsed, dict) else []
+            if isinstance(candidates, list):
+                return [item for item in candidates if isinstance(item, dict)]
+            logger.warning("Daily chat memory extraction returned invalid candidates; skipping write")
+        except Exception as exc:
+            logger.warning("Daily chat memory extraction failed; skipping write: %s", exc)
+        return []
 
     @staticmethod
     def _daily_chat_memory_noise(content: str) -> bool:
@@ -4474,8 +4334,8 @@ class ReflectionEngine:
 
     @staticmethod
     def _normalize_daily_chat_memory_mode(value: Any) -> str:
-        mode = str(value or "review").strip().lower()
-        return mode if mode in DAILY_CHAT_MEMORY_MODES else "review"
+        mode = str(value or "off").strip().lower()
+        return mode if mode in DAILY_CHAT_MEMORY_MODES else "off"
 
     @staticmethod
     def _normalize_period(period: str) -> str:
