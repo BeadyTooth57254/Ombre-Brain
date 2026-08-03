@@ -9232,45 +9232,45 @@ class GatewayService:
                 session_id,
             )
 
-def _ensure_reasoning_content_in_messages(self, session_id: str, messages: Any) -> None:
-    """
-    Ensure reasoning_content is present in ALL assistant messages when tools are used.
-    DeepSeek API requires: when using tools parameter, reasoning_content must be 
-    passed back in ALL subsequent requests, or it returns 400 Bad Request.
-    """
-    if not isinstance(messages, list):
-        return
-    
-    # Check if conversation uses tools
-    has_tool_messages = any(
-        isinstance(msg, dict) and msg.get("role") == "tool"
-        for msg in messages
-    )
-    
-    if not has_tool_messages:
-        return
-    
-    cache = self.pending_tool_reasoning.get(session_id, {})
-    
-    # For each assistant message, restore reasoning_content from cache
-    for message in messages:
-        if not isinstance(message, dict) or message.get("role") != "assistant":
-            continue
+    def _ensure_reasoning_content_in_messages(self, session_id: str, messages: Any) -> None:
+        """
+        Ensure reasoning_content is present in ALL assistant messages when tools are used.
+        DeepSeek API requires: when using tools parameter, reasoning_content must be 
+        passed back in ALL subsequent requests, or it returns 400 Bad Request.
+        """
+        if not isinstance(messages, list):
+            return
         
-        # Skip if already has reasoning_content
-        if message.get("reasoning_content"):
-            continue
+        # Check if conversation uses tools
+        has_tool_messages = any(
+            isinstance(msg, dict) and msg.get("role") == "tool"
+            for msg in messages
+        )
         
-        # Try to find cached reasoning_content
-        signature = self._tool_call_signature(message)
-        if signature and signature in cache:
-            cached = cache[signature]
-            if cached.get("reasoning_content"):
-                message["reasoning_content"] = cached["reasoning_content"]
-                logger.info(
-                    "Restored reasoning_content for assistant message | session=%s",
-                    session_id,
-                )
+        if not has_tool_messages:
+            return
+        
+        cache = self.pending_tool_reasoning.get(session_id, {})
+        
+        # For each assistant message, restore reasoning_content from cache
+        for message in messages:
+            if not isinstance(message, dict) or message.get("role") != "assistant":
+                continue
+            
+            # Skip if already has reasoning_content
+            if message.get("reasoning_content"):
+                continue
+            
+            # Try to find cached reasoning_content
+            signature = self._tool_call_signature(message)
+            if signature and signature in cache:
+                cached = cache[signature]
+                if cached.get("reasoning_content"):
+                    message["reasoning_content"] = cached["reasoning_content"]
+                    logger.info(
+                        "Restored reasoning_content for assistant message | session=%s",
+                        session_id,
+                    )
 
     def _capture_reasoning_from_response(self, session_id: str, upstream_response: httpx.Response) -> None:
         try:
