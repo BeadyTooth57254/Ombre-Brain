@@ -1681,7 +1681,7 @@ class GatewayService:
 
         forward_payload = deepcopy(payload)
         forward_payload["model"] = model
-        self._ensure_reasoning_content_in_messages(session_id, forward_payload.get("messages"))
+        self._restore_cached_reasoning_content(session_id, forward_payload.get("messages"))
         forward_payload["messages"] = self._inject_context_messages(
             forward_payload["messages"],
             stable_context,
