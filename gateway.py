@@ -1681,12 +1681,12 @@ class GatewayService:
 
         forward_payload = deepcopy(payload)
         forward_payload["model"] = model
-        self._restore_cached_reasoning_content(session_id, forward_payload.get("messages"))
         forward_payload["messages"] = self._inject_context_messages(
             forward_payload["messages"],
             stable_context,
             dynamic_context,
         )
+        self._restore_cached_reasoning_content(session_id, forward_payload.get("messages"))
 
         forward_payload["stream"] = payload.get("stream") is True
         if include_debug:
