@@ -514,7 +514,7 @@ class GatewayService:
         self.upstream_key_cooldowns: dict[tuple[str, str], float] = {}
         self.pending_tool_reasoning: dict[str, dict[tuple[str, ...], dict[str, Any]]] = {}
 
-        self.http_client = http_client or httpx.AsyncClient(timeout=60.0)
+        self.http_client = http_client or httpx.AsyncClient(timeout=180.0)
 
     async def close(self) -> None:
         if self.http_client and not getattr(self.http_client, "is_closed", False):
