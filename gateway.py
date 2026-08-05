@@ -20463,7 +20463,7 @@ class GatewayService:
             return
 
         if not signature:
-            self.pending_tool_reasoning.pop(session_id, None)
+            return
 
     def _tool_call_signature(self, assistant_message: Any) -> tuple[str, ...]:
         if not isinstance(assistant_message, dict):
