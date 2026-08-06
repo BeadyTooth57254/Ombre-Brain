@@ -23,8 +23,8 @@ buckets_dir: "/app/buckets"
 
 # --- Runtime state path / 运行状态路径 ---
 # Stores runtime SQLite state such as Persona State outside bucket sync.
-# 保存 Persona State 等运行时 SQLite 状态，建议放在 buckets 同步目录外。
-# state_dir: "/path/to/ombre-brain/state"
+# 保存 Persona State 等运行时 SQLite 状态，建议放在 buckets 同步目录外
+state_dir: "/app/state"
 
 # --- Identity / 名字口径 ---
 # These names are used in prompts and comment authors. Change this block first
@@ -144,7 +144,7 @@ decay:
 # 优先使用 embedding 独立 API；未配置时回退复用脱水 API
 embedding:
   enabled: true                   # Enable embedding / 启用向量化
-  model: "Qwen/Qwen3-Embedding-4B"  # Embedding model / 向量化模型
+  model: "Qwen/Qwen3-Embedding-8B"  # Embedding model / 向量化模型
   base_url: "https://api.siliconflow.cn/v1"
   max_chars: 6000                 # Max chars sent per embedding request / 单次向量化最多字符数
   query_timeout_seconds: 3         # Gateway recall query timeout / Gateway 召回查询向量超时秒数
@@ -169,7 +169,7 @@ embedding:
 reranker:
   enabled: true
   model: "Qwen/Qwen3-Reranker-4B"
-  base_url: ""
+  base_url: "https://api.siliconflow.cn/v1"
   # api_key: ""                   # Use OMBRE_RERANKER_API_KEY or reuse embedding key
   candidate_limit: 30
   score_weight: 0.65
@@ -296,12 +296,12 @@ moment_annotations:
 gateway:
   host: "0.0.0.0"
   port: 8010
-  default_session_id: "main"      # used only by compatible routes when the header is omitted
-  upstream_base_url: "https://api.deepseek.com/v1"
-  upstream_default_model: "deepseek-v4-pro"
-  upstream_models:
-    - "deepseek-v4-pro"
-    - "deepseek-v4-flash"
+  default_session_id: "es-sentinel"      # used only by compatible routes when the header is omitted
+#  upstream_base_url: "https://api.deepseek.com"
+#  upstream_default_model: "deepseek-v4-pro"
+#  upstream_models:
+#    - "deepseek-v4-pro"
+#    - "deepseek-v4-flash"
   # Optional prompt cache hints / 可选提示缓存参数
   # openai: send prompt_cache_key using X-Ombre-Session-Id; leave empty for other providers.
   # anthropic: send top-level cache_control for proxies that require it.
@@ -310,7 +310,7 @@ gateway:
   # anthropic: 给只认顶层 cache_control 的中转站使用；
   # anthropic_explicit: 在 system/tools/上一条 assistant 历史上显式打断点。
   prompt_cache: "openai"
-  # prompt_cache_retention: "24h"  # Optional for supported OpenAI models / 支持模型可选
+  prompt_cache_retention: "24h"  # Optional for supported OpenAI models / 支持模型可选
   # Optional multi-upstream mode / 可选多上游模式
   # When upstreams is set, the gateway aggregates all listed models and routes
   # each request by model name to the matching upstream.
@@ -318,28 +318,30 @@ gateway:
   # name to upstream.
   # 配置 upstreams 后，网关会聚合所有模型，并按模型名路由到对应上游。
   # models 可用字典写别名：id 是客户端看到的名字，upstream_model 是发给上游的真实名字。
-  # upstreams:
-  #   - name: "deepseek"
-  #     protocol: "openai"  # default; forwards to /chat/completions
-  #     base_url: "https://api.deepseek.com"
-  #     api_key_env: "OMBRE_GATEWAY_DEEPSEEK_API_KEY"
-  #     # Optional fallback keys. Retryable errors switch to the next key.
-  #     # 可选备用 key。遇到可重试错误时自动换下一个 key。
-  #     # api_key_envs:
-  #     #   - "OMBRE_GATEWAY_DEEPSEEK_API_KEY_1"
-  #     #   - "OMBRE_GATEWAY_DEEPSEEK_API_KEY_2"
-  #     default_model: "deepseek-v4-flash"
-  #     prompt_cache: ""  # DeepSeek uses automatic prefix cache / DeepSeek 使用自动前缀缓存
-  #     models:
-  #       - "deepseek-v4-flash"
-  #       - "deepseek-v4-pro"
-  #   - name: "siliconflow"
-  #     protocol: "openai"
-  #     base_url: "https://api.siliconflow.cn/v1"
-  #     api_key_env: "OMBRE_GATEWAY_SILICONFLOW_API_KEY"
-  #     models:
-  #       - "Qwen/Qwen3-32B"
-  #       - "THUDM/GLM-4-32B"
+  upstreams:
+    - name: "deepseek"
+      protocol: "openai"  # default; forwards to /chat/completions
+      base_url: "https://api.deepseek.com"
+      api_key_env: "OMBRE_GATEWAY_DEEPSEEK_API_KEY"
+      # Optional fallback keys. Retryable errors switch to the next key.
+      # 可选备用 key。遇到可重试错误时自动换下一个 key。
+      # api_key_envs:
+      #   - "OMBRE_GATEWAY_DEEPSEEK_API_KEY_1"
+      #   - "OMBRE_GATEWAY_DEEPSEEK_API_KEY_2"
+      default_model: "deepseek-v4-pro"
+      prompt_cache: ""  # DeepSeek uses automatic prefix cache / DeepSeek 使用自动前缀缓存
+      models:
+        - "deepseek-v4-pro"
+        - "deepseek-v4-flash"
+    - name: "siliconflow"
+      protocol: "openai"
+      base_url: "https://api.siliconflow.cn/v1"
+      api_key_env: "OMBRE_GATEWAY_SILICONFLOW_API_KEY"
+      models:
+        - "Pro/moonshotai/Kimi-K2.6"
+        - "moonshotai/Kimi-K2.7-Code"
+        - "Pro/MiniMaxAI/MiniMax-M2.5"
+        - "zai-org/GLM-5.2"
   #   - name: "anthropic"
   #     protocol: "anthropic"  # forwards /v1/messages to upstream /messages
   #     base_url: "https://api.anthropic.com/v1"
@@ -578,7 +580,7 @@ persona:
   model: "deepseek-v4-flash"
   # Optional thinking mode override for DeepSeek v4 models:
   #   disabled = non-thinking / enabled = thinking / empty = provider default
-  thinking_mode: "disabled"
+  thinking_mode: "enabled"
   json_response_format: true     # request provider-native JSON output for Persona evaluators
   # api_key: ""                  # Use OMBRE_PERSONA_API_KEY; falls back to OMBRE_API_KEY
   temperature: 0.1
@@ -646,7 +648,7 @@ reflection:
   edge_backfill_limit: 5             # default limit for manual edge_backfill; only writes memory_edges
   base_url: "https://api.deepseek.com"                    # empty = embedding.base_url
   model: "deepseek-v4-flash"                       # empty = persona/dehydration model
-  thinking_mode: "deepseek-v4-flash"               # empty = model default; disabled/enabled can force Qwen-style thinking
+  thinking_mode: "disabled"               # empty = model default; disabled/enabled can force Qwen-style thinking
   # api_key: ""                   # empty = OMBRE_REFLECTION_API_KEY or embedding.api_key
   temperature: 0.1
   max_tokens: 700
@@ -716,8 +718,8 @@ portrait:
   daily_hour: 4
   check_interval_minutes: 60
   state_path: ""                    # default = state/portrait_state.json
-  base_url: ""                      # empty = reflection/persona/dehydration base_url
-  model: ""                         # empty = reflection/persona/dehydration model
+  base_url: "https://api.deepseek.com" # empty = reflection/persona/dehydration base_url
+  model: "deepseek-v4-flash"        # empty = reflection/persona/dehydration model
   # api_key: ""                     # OMBRE_PORTRAIT_API_KEY overrides
   thinking_mode: ""
   temperature: 0.1
@@ -752,7 +754,7 @@ dream:
   thinking_mode: "disabled"
   temperature: 0.85
   max_tokens: 900
-  timezone: "Asia/Shanghai"
+  timezone: "Asia/changsha"
   daily_hour: 3
   run_window_hours: 3
   daily_probability: 0.4
