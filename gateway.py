@@ -3257,6 +3257,18 @@ class GatewayService:
                     "snapshot_key": "",
                     "source_message_count": 0,
                 }
+
+        # ====== 在这里插入兜底逻辑 ======
+        # 确保最终 messages 里所有带 tool_calls 的 assistant 消息都有 reasoning_content 字段
+        final_messages = forward_payload.get("messages")
+        if isinstance(final_messages, list):
+            for msg in final_messages:
+                if isinstance(msg, dict) and msg.get("role") == "assistant" and msg.get("tool_calls"):
+                    if "reasoning_content" not in msg or msg.get("reasoning_content") is None:
+                        msg["reasoning_content"] = ""
+                        logger.debug("Force added reasoning_content field to assistant message with tool_calls")
+        # ====== 插入结束 ======
+        
         self._apply_prompt_cache_hints(forward_payload, session_id)
         forward_payload["stream"] = payload.get("stream") is True
         mark_step("finalize_forward_payload", stage_started_at)
@@ -20374,58 +20386,44 @@ class GatewayService:
     def _restore_cached_reasoning_content(self, session_id: str, messages: Any) -> None:
         if not isinstance(messages, list):
             return
-
+        
         cache = self.pending_tool_reasoning.get(session_id)
-        if not cache:
-            return
-
-        restored = 0
+        restored_count = 0
+        
         for message in messages:
             if not isinstance(message, dict) or message.get("role") != "assistant":
                 continue
+            
+            # 关键修复：只要消息带有 tool_calls，就确保 reasoning_content 字段存在
+            if message.get("tool_calls"):
+                # 如果字段完全缺失，或者值是 None，就设为空字符串
+                if "reasoning_content" not in message or message.get("reasoning_content") is None:
+                    message["reasoning_content"] = ""
+                    restored_count += 1
+                    # 注意：这里先设为空串，如果后面缓存里有更完整的内容，会用缓存覆盖
+            
+            # 如果缓存可用，尝试用缓存的完整内容覆盖
             signature = self._tool_call_signature(message)
-            if not signature:
-                continue
-            cached_message = cache.get(signature)
-            if not cached_message:
-                continue
-
-            restored_fields = []
-
-            # 1. 先尝试恢复顶层的 reasoning_content
-            cached_reasoning_content = cached_message.get("reasoning_content")
-            if not message.get("reasoning_content") and cached_reasoning_content:
-                message["reasoning_content"] = cached_reasoning_content
-                restored_fields.append("reasoning_content")
-
-            # 2. 如果顶层没有，但 reasoning_details 里有内容，从中拼出 reasoning_content
-            elif not message.get("reasoning_content") and cached_message.get("reasoning_details"):
-                details = cached_message.get("reasoning_details", [])
-                text_parts = []
-                for detail in details:
-                    if isinstance(detail, dict) and detail.get("type") == "reasoning.text":
-                        text_parts.append(str(detail.get("text") or ""))
-                if text_parts:
-                    message["reasoning_content"] = "\n".join(text_parts)
-                    restored_fields.append("reasoning_content_from_details")
-
-            # 3. 恢复 reasoning_details（如果有）
-            if not message.get("reasoning_details") and cached_message.get("reasoning_details"):
-                message["reasoning_details"] = deepcopy(cached_message["reasoning_details"])
-                reasoning_text = self._reasoning_text_from_details(message["reasoning_details"])
-                if reasoning_text and not message.get("reasoning"):
-                    message["reasoning"] = reasoning_text
-                restored_fields.append("reasoning_details")
-
-            if restored_fields:
-                restored += 1
-
-        if restored:
+            if signature and cache:
+                cached_message = cache.get(signature)
+                if cached_message:
+                    # 只要缓存里有 reasoning_content 就覆盖
+                    if cached_message.get("reasoning_content") is not None:
+                        message["reasoning_content"] = cached_message["reasoning_content"]
+                    # 恢复 reasoning_details
+                    if not message.get("reasoning_details") and cached_message.get("reasoning_details"):
+                        message["reasoning_details"] = deepcopy(cached_message["reasoning_details"])
+                        reasoning_text = self._reasoning_text_from_details(message["reasoning_details"])
+                        if reasoning_text and not message.get("reasoning"):
+                            message["reasoning"] = reasoning_text
+                    # 如果上面覆盖了，就不算作新恢复的计数，避免日志混淆，但计数器已经加过，不影响
+                    # 可以在这里把计数减掉或者保持原样，为了简化，我们不计较这个细节
+        
+        if restored_count:
             logger.info(
-                "Gateway restored reasoning context for %s assistant tool-call message(s) | session=%s fields=%s",
-                restored,
+                "Gateway ensured reasoning_content field for %s assistant tool-call message(s) | session=%s",
+                restored_count,
                 session_id,
-                restored_fields,
             )
 
     def _capture_reasoning_from_response(self, session_id: str, upstream_response: httpx.Response) -> None:
