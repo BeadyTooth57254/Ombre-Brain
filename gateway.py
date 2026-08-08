@@ -21114,6 +21114,22 @@ class GatewayService:
             for message in messages:
                 if isinstance(message, dict):
                     message.pop("_ombre_anthropic_content", None)
+        
+        # 调试：检查所有 assistant 消息是否包含 reasoning 字段
+        assistant_msgs = []
+        if isinstance(messages, list):
+            for idx, m in enumerate(messages):
+                if isinstance(m, dict) and m.get("role") == "assistant":
+                    assistant_msgs.append({
+                        "index": idx,
+                        "has_reasoning_content": "reasoning_content" in m and m.get("reasoning_content") is not None,
+                        "has_reasoning_details": "reasoning_details" in m and bool(m.get("reasoning_details")),
+                        "has_tool_calls": "tool_calls" in m and bool(m.get("tool_calls")),
+                        "content_preview": (m.get("content") or "")[:50]
+                    })
+        if assistant_msgs:
+            logger.info("DEBUG: assistant messages in final payload: %s", assistant_msgs)
+        
         return upstream_payload
 
     def _upstream_uses_anthropic_protocol(self, upstream: dict[str, Any]) -> bool:
