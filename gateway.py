@@ -20374,11 +20374,11 @@ class GatewayService:
     def _restore_cached_reasoning_content(self, session_id: str, messages: Any) -> None:
         if not isinstance(messages, list):
             return
-        
+
         cache = self.pending_tool_reasoning.get(session_id)
         if not cache:
-            return  # session 从未经过 tool 对话，无需恢复
-        
+            return
+
         restored = 0
         for message in messages:
             if not isinstance(message, dict) or message.get("role") != "assistant":
@@ -20389,24 +20389,43 @@ class GatewayService:
             cached_message = cache.get(signature)
             if not cached_message:
                 continue
+
             restored_fields = []
-            if not message.get("reasoning_content") and cached_message.get("reasoning_content"):
-                message["reasoning_content"] = cached_message["reasoning_content"]
+
+            # 1. 先尝试恢复顶层的 reasoning_content
+            cached_reasoning_content = cached_message.get("reasoning_content")
+            if not message.get("reasoning_content") and cached_reasoning_content:
+                message["reasoning_content"] = cached_reasoning_content
                 restored_fields.append("reasoning_content")
+
+            # 2. 如果顶层没有，但 reasoning_details 里有内容，从中拼出 reasoning_content
+            elif not message.get("reasoning_content") and cached_message.get("reasoning_details"):
+                details = cached_message.get("reasoning_details", [])
+                text_parts = []
+                for detail in details:
+                    if isinstance(detail, dict) and detail.get("type") == "reasoning.text":
+                        text_parts.append(str(detail.get("text") or ""))
+                if text_parts:
+                    message["reasoning_content"] = "\n".join(text_parts)
+                    restored_fields.append("reasoning_content_from_details")
+
+            # 3. 恢复 reasoning_details（如果有）
             if not message.get("reasoning_details") and cached_message.get("reasoning_details"):
                 message["reasoning_details"] = deepcopy(cached_message["reasoning_details"])
                 reasoning_text = self._reasoning_text_from_details(message["reasoning_details"])
                 if reasoning_text and not message.get("reasoning"):
                     message["reasoning"] = reasoning_text
                 restored_fields.append("reasoning_details")
+
             if restored_fields:
                 restored += 1
 
         if restored:
             logger.info(
-                "Gateway restored reasoning context for %s assistant tool-call message(s) | session=%s",
+                "Gateway restored reasoning context for %s assistant tool-call message(s) | session=%s fields=%s",
                 restored,
                 session_id,
+                restored_fields,
             )
 
     def _capture_reasoning_from_response(self, session_id: str, upstream_response: httpx.Response) -> None:
