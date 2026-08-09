@@ -580,7 +580,7 @@ persona:
   model: "deepseek-v4-flash"
   # Optional thinking mode override for DeepSeek v4 models:
   #   disabled = non-thinking / enabled = thinking / empty = provider default
-  thinking_mode: "enabled"
+  thinking_mode: "disabled"
   json_response_format: true     # request provider-native JSON output for Persona evaluators
   # api_key: ""                  # Use OMBRE_PERSONA_API_KEY; falls back to OMBRE_API_KEY
   temperature: 0.1
