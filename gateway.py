@@ -3259,11 +3259,21 @@ class GatewayService:
                 }
 
         # ====== 在这里插入兜底逻辑 ======
-        # 确保最终 messages 里所有带 tool_calls 的 assistant 消息都有 reasoning_content 字段
+        # 1) DeepSeek 拒收 content=None 且无 tool_calls 的 assistant 空壳消息 ->
+        #    把 content 规范化为 ""（空字符串已实测可过 DeepSeek 200；流式思考模式下
+        #    某轮只出推理无正文时 delta.content=null，会被存成 content=None 变成每次重放的地雷）
+        # 2) 带 tool_calls 的 assistant 消息确保有 reasoning_content 字段
         final_messages = forward_payload.get("messages")
         if isinstance(final_messages, list):
             for msg in final_messages:
-                if isinstance(msg, dict) and msg.get("role") == "assistant" and msg.get("tool_calls"):
+                if not isinstance(msg, dict) or msg.get("role") != "assistant":
+                    continue
+                tool_calls = msg.get("tool_calls")
+                content = msg.get("content")
+                if content is None and not tool_calls:
+                    msg["content"] = ""
+                    logger.debug("Normalized assistant null content to empty string (no tool_calls)")
+                if tool_calls:
                     if "reasoning_content" not in msg or msg.get("reasoning_content") is None:
                         msg["reasoning_content"] = ""
                         logger.debug("Force added reasoning_content field to assistant message with tool_calls")
