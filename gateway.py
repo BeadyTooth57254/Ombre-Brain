@@ -3259,11 +3259,52 @@ class GatewayService:
                 }
 
         # ====== 在这里插入兜底逻辑 ======
-        # 1) DeepSeek 拒收 content=None 且无 tool_calls 的 assistant 空壳消息 ->
+        # 1) 工具序列修复：DeepSeek 死规定「带 tool_calls 的 assistant 消息」后面必须
+        #    紧邻跟齐每一个 tool_call_id 的 tool 回应，中间不能插别的、也不能缺（否则 400）。
+        #    网关注入上下文 / 客户端历史畸形都会破坏这个配对。兜底：配对不合法的，把该
+        #    assistant 的 tool_calls 剥掉降级成普通消息，并丢弃紧随其后的孤儿 tool 回应
+        #    （否则会触发 O_orphan_tool_msg）。正确配对原样保留。
+        def _repair_tool_sequence(messages):
+            out = []
+            i = 0
+            n = len(messages)
+            while i < n:
+                msg = messages[i]
+                if isinstance(msg, dict) and msg.get("role") == "assistant" and msg.get("tool_calls"):
+                    tcs = msg.get("tool_calls")
+                    ids = {tc.get("id") for tc in tcs if tc.get("id")}
+                    j = i + 1
+                    tool_msgs = []
+                    while j < n and isinstance(messages[j], dict) and messages[j].get("role") == "tool":
+                        tool_msgs.append(messages[j])
+                        j += 1
+                    covered = {m.get("tool_call_id") for m in tool_msgs}
+                    valid = bool(ids) and ids.issubset(covered) and covered.issubset(ids)
+                    if valid:
+                        out.append(msg)
+                        out.extend(tool_msgs)
+                    else:
+                        demoted = dict(msg)
+                        demoted.pop("tool_calls", None)
+                        out.append(demoted)
+                        logger.debug("Demoted assistant message with unpaired tool_calls (missing/mismatched tool responses)")
+                    i = j
+                elif isinstance(msg, dict) and msg.get("role") == "tool":
+                    # 孤儿 tool 消息（前面没有配对的 assistant）-> 丢弃
+                    logger.debug("Dropped orphan tool message (no matching assistant tool_calls)")
+                    i += 1
+                else:
+                    out.append(msg)
+                    i += 1
+            return out
+        final_messages = forward_payload.get("messages")
+        if isinstance(final_messages, list):
+            final_messages = _repair_tool_sequence(final_messages)
+            forward_payload["messages"] = final_messages
+        # 2) DeepSeek 拒收 content=None 且无 tool_calls 的 assistant 空壳消息 ->
         #    把 content 规范化为 ""（空字符串已实测可过 DeepSeek 200；流式思考模式下
         #    某轮只出推理无正文时 delta.content=null，会被存成 content=None 变成每次重放的地雷）
-        # 2) 带 tool_calls 的 assistant 消息确保有 reasoning_content 字段
-        final_messages = forward_payload.get("messages")
+        # 3) 带 tool_calls 的 assistant 消息确保有 reasoning_content 字段
         if isinstance(final_messages, list):
             for msg in final_messages:
                 if not isinstance(msg, dict) or msg.get("role") != "assistant":
@@ -3517,6 +3558,14 @@ class GatewayService:
                 len(key_entries),
                 latency_ms,
             )
+            if response.status_code >= 400:
+                logger.error(
+                    "Gateway upstream error body | upstream=%s model=%s status=%s body=%s",
+                    upstream["name"],
+                    route["upstream_model"],
+                    response.status_code,
+                    (response.text or "")[:2000],
+                )
             if 200 <= response.status_code < 300:
                 self._clear_upstream_key_cooldown(upstream, key_entry)
                 return response
@@ -3586,6 +3635,14 @@ class GatewayService:
                 len(key_entries),
                 latency_ms,
             )
+            if response.status_code >= 400:
+                logger.error(
+                    "Gateway upstream error body | upstream=%s model=%s status=%s body=%s",
+                    upstream["name"],
+                    route["upstream_model"],
+                    response.status_code,
+                    (response.text or "")[:2000],
+                )
             if 200 <= response.status_code < 300:
                 self._clear_upstream_key_cooldown(upstream, key_entry)
                 return response
