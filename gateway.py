@@ -3287,11 +3287,11 @@ class GatewayService:
                         demoted = dict(msg)
                         demoted.pop("tool_calls", None)
                         out.append(demoted)
-                        logger.debug("Demoted assistant message with unpaired tool_calls (missing/mismatched tool responses)")
+                        logger.info("Demoted assistant message with unpaired tool_calls (missing/mismatched tool responses)")
                     i = j
                 elif isinstance(msg, dict) and msg.get("role") == "tool":
                     # 孤儿 tool 消息（前面没有配对的 assistant）-> 丢弃
-                    logger.debug("Dropped orphan tool message (no matching assistant tool_calls)")
+                    logger.info("Dropped orphan tool message (no matching assistant tool_calls)")
                     i += 1
                 else:
                     out.append(msg)
@@ -3313,7 +3313,7 @@ class GatewayService:
                 content = msg.get("content")
                 if content is None and not tool_calls:
                     msg["content"] = ""
-                    logger.debug("Normalized assistant null content to empty string (no tool_calls)")
+                    logger.info("Normalized assistant null content to empty string (no tool_calls)")
                 if tool_calls:
                     if "reasoning_content" not in msg or msg.get("reasoning_content") is None:
                         msg["reasoning_content"] = ""
