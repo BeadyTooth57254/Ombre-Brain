@@ -88,7 +88,7 @@ memory_write_gate:
 dehydration:
   # Supports any OpenAI-compatible API: DeepSeek / Ollama / LM Studio / vLLM / Gemini etc.
   # 支持所有 OpenAI 兼容 API：DeepSeek / Ollama / LM Studio / vLLM / Gemini 等
-  model: "deepseek-v4-flash"
+  model: "deepseek-flash"
   base_url: "https://api.deepseek.com"
   # Optional thinking mode override for DeepSeek v4 models:
   #   disabled = non-thinking / enabled = thinking / empty = provider default
@@ -301,7 +301,7 @@ gateway:
 #  upstream_default_model: "deepseek-v4-pro"
 #  upstream_models:
 #    - "deepseek-v4-pro"
-#    - "deepseek-v4-flash"
+#    - "deepseek-flash"
   # Optional prompt cache hints / 可选提示缓存参数
   # openai: send prompt_cache_key using X-Ombre-Session-Id; leave empty for other providers.
   # anthropic: send top-level cache_control for proxies that require it.
@@ -578,7 +578,7 @@ persona:
   profile_id: "es_sentinel"
   mode: "llm"
   base_url: "https://api.deepseek.com"
-  model: "deepseek-v4-flash"
+  model: "deepseek-flash"
   # Optional thinking mode override for DeepSeek v4 models:
   #   disabled = non-thinking / enabled = thinking / empty = provider default
   thinking_mode: "disabled"
@@ -648,7 +648,7 @@ reflection:
   enrich_backfill_limit: 5           # max buckets to backfill per scheduler tick
   edge_backfill_limit: 5             # default limit for manual edge_backfill; only writes memory_edges
   base_url: "https://api.deepseek.com"                    # empty = embedding.base_url
-  model: "deepseek-v4-flash"                       # empty = persona/dehydration model
+  model: "deepseek-flash"                       # empty = persona/dehydration model
   thinking_mode: "disabled"               # empty = model default; disabled/enabled can force Qwen-style thinking
   # api_key: ""                   # empty = OMBRE_REFLECTION_API_KEY or embedding.api_key
   temperature: 0.1
@@ -720,7 +720,7 @@ portrait:
   check_interval_minutes: 60
   state_path: ""                    # default = state/portrait_state.json
   base_url: "https://api.deepseek.com" # empty = reflection/persona/dehydration base_url
-  model: "deepseek-v4-flash"        # empty = reflection/persona/dehydration model
+  model: "deepseek-flash"        # empty = reflection/persona/dehydration model
   # api_key: ""                     # OMBRE_PORTRAIT_API_KEY overrides
   thinking_mode: ""
   temperature: 0.1
@@ -750,7 +750,7 @@ dream:
   retain_after_inject: true         # keeps each surfaced dream readable while it still only injects once
   # DeepSeek official OpenAI-compatible endpoint.
   base_url: "https://api.deepseek.com"
-  model: "deepseek-v4-flash"
+  model: "deepseek-flash"
   # api_key: ""                   # OMBRE_DREAM_API_KEY overrides
   thinking_mode: "disabled"
   temperature: 0.85
